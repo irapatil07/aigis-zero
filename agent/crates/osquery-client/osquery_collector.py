@@ -20,35 +20,52 @@ class OsqueryCollector:
         self.config = config
 
     async def start(self, agent_uuid:str):
-      
-      result_queue = asyncio.Queue(maxsize=100)
-      scheduler = QueryScheduler(self.config.db_path)
+        try:
+            result_queue = Queue(maxsize=100)
+            scheduler = QueryScheduler(self.config.db_path)
+            
+            asyncio.create_task(
+                scheduler.run(
+                result_queue,
+                self.config.socket_path,
+                agent_uuid,
+                )
+            )
 
-      asyncio.create_task(
-        scheduler.run(
-            result_queue,
-            self.config.socket_path,
-            agent_uuid,
-        )
-    )
+            logger.info("Scheduler started successfully")
+            return result_queue
 
-    return result_queue
+        except Exception:
+            logger.exception("Failed to start osquery scheduler")
+            raise
 
-    async def live_query(self, sql):
+    
+    async def live_query(self, sql:str):
+        
+        try:
+            client = await OsqueryClient.connect(
+                self.config.socket_path
+            )
+    
+            return await client.live_query(sql)
 
-        client = await OsqueryClient.connect(
-            self.config.socket_path
-        )
+        except Exception:
+            logger.exception("Live query failed")
+            raise
 
-        return await client.live_query(sql)
 
+    
     async def update_schedule(self, queries):
+        
+        try:
+            scheduler = QueryScheduler(
+                self.config.db_path
+            )
+    
+            scheduler.upsert_queries(queries)
 
-        scheduler = QueryScheduler(
-            self.config.db_path
-        )
-
-        scheduler.upsert_queries(queries)
+        except Exception:
+            logger.exception("Failed to update scheduler")
+            raise
      
 
-# Error handling here?
