@@ -1,4 +1,4 @@
-from client import OsqueryClient
+from osquery_client import OsqueryClient
 from scheduler import QueryScheduler
 import asyncio
 from asyncio import Queue
@@ -22,7 +22,7 @@ class OsqueryCollector:
     async def start(self, agent_uuid:str):
         try:
             result_queue = Queue(maxsize=100)
-            scheduler = QueryScheduler(self.config.db_path)
+            self.scheduler = QueryScheduler(self.config.db_path)
             
             asyncio.create_task(
                 scheduler.run(
@@ -62,7 +62,7 @@ class OsqueryCollector:
                 self.config.db_path
             )
     
-            scheduler.upsert_queries(queries)
+            await scheduler.upsert_queries(queries)
 
         except Exception:
             logger.exception("Failed to update scheduler")
